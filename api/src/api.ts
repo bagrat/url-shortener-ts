@@ -1,11 +1,30 @@
 import express from 'express';
+import cors from 'cors';
 import bodyParser from 'body-parser';
 import { UrlStore } from './urlStore';
 import { generateSlug, isValidUrl } from './utils';
 
 const app = express();
 
-app.use(bodyParser.json());
+app.use(bodyParser.json()).use(
+  cors({
+    origin: (origin: string | undefined, callback) => {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const allowed = [/http:\/\/localhost:*/i, /http:\/\/localhost/i];
+
+      for (const pattern of allowed) {
+        if (pattern.test(origin)) {
+          return callback(null, true);
+        }
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
+  })
+);
 
 const URL_DATA_FILE = './urlData.json';
 
