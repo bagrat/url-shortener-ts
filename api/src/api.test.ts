@@ -1,10 +1,13 @@
 import express from 'express';
 import request from 'supertest';
 
+let originalGenerateSlug: typeof import('./utils').generateSlug;
 jest.mock('./utils', () => {
   const original = jest.requireActual('./utils');
+  originalGenerateSlug = original.generateSlug;
   return {
     ...original,
+    originalImpl: original,
     generateSlug: jest.fn((...params) => {
       return original.generateSlug(...params);
     }),
@@ -13,18 +16,18 @@ jest.mock('./utils', () => {
 
 import * as utils from './utils';
 import { initApp } from './api';
+import { mkdtempSync } from 'fs';
+import path from 'path';
+import os from 'os';
 
 describe('API', () => {
   let app: express.Application;
 
-  beforeAll(async () => {
-    const urlDataFile = './urlData.json';
-    const fs = require('fs');
-    if (fs.existsSync(urlDataFile)) {
-      fs.unlinkSync(urlDataFile);
-    }
+  beforeEach(async () => {
+    const tmpdir = mkdtempSync(path.join(os.tmpdir(), 'shortener-test-'));
+    const urlDataFile = path.join(tmpdir, './urlData.json');
 
-    app = await initApp();
+    app = await initApp(urlDataFile);
   });
 
   it('should validate the URL value and presence', async () => {
@@ -70,14 +73,14 @@ describe('API', () => {
   });
 
   it('should make sure the generated slugs are unique', async () => {
-    const generateSlugMock = (utils as jest.Mocked<typeof utils>).generateSlug
-      .mockClear()
+    (utils as jest.Mocked<typeof utils>).generateSlug
       .mockReturnValueOnce('sameSlug')
       .mockReturnValueOnce('sameSlug')
       .mockReturnValueOnce('sameSlug')
       .mockReturnValueOnce('sameSlug')
       .mockReturnValueOnce('sameSlug')
-      .mockReturnValueOnce('otherSlug');
+      .mockReturnValueOnce('otherSlug')
+      .mockImplementation(() => originalGenerateSlug());
 
     let resp = await request(app)
       .post('/shorten')
@@ -95,7 +98,44 @@ describe('API', () => {
     const slug2 = resp.body.shortUrl.split('/').pop();
     expect(slug1).not.toBe(slug2);
     expect(slug2).toBe('otherSlug');
-
-    generateSlugMock.mockReset();
   });
+
+  it('should limit the number of requests', async () => {
+    for (let i = 0; i < 10; i++) {
+      const resp = await request(app)
+        .post('/shorten')
+        .send({ originalUrl: 'http://example.com' });
+
+      expect(resp.statusCode).toBe(200);
+    }
+
+    const resp = await request(app)
+      .post('/shorten')
+      .send({ originalUrl: 'http://example.com' });
+
+    expect(resp.statusCode).toBe(429);
+  });
+
+  it('should raise the limit after the window has passed', async () => {
+    for (let i = 0; i < 10; i++) {
+      const resp = await request(app)
+        .post('/shorten')
+        .send({ originalUrl: 'http://example.com' });
+      expect(resp.statusCode).toBe(200);
+    }
+
+    let resp = await request(app)
+      .post('/shorten')
+      .send({ originalUrl: 'http://example.com' });
+
+    expect(resp.statusCode).toBe(429);
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    resp = await request(app)
+      .post('/shorten')
+      .send({ originalUrl: 'http://example.com' });
+
+    expect(resp.statusCode).toBe(200);
+  }, 7000);
 });

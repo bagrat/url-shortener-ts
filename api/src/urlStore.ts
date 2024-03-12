@@ -7,6 +7,8 @@ interface UrlEntry {
   slug: Slug;
 }
 
+// There is no need for this abstraction given a sole implementation.
+// This is done for the sake of demonstration.
 abstract class FileStore<
   DataType extends Record<string, unknown> | Array<unknown>,
 > {
@@ -16,7 +18,10 @@ abstract class FileStore<
 
   async load(): Promise<void> {
     try {
-      const data = await readFile(this.dataFile, { encoding: 'utf8' });
+      const data = await readFile(this.dataFile, {
+        encoding: 'utf8',
+        flag: 'w+',
+      });
       this.data = JSON.parse(data);
     } catch {
       return;

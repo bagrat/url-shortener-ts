@@ -23,3 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 
 api/urlData.json
+
+api/src/*.js
+**/jest.config.js
