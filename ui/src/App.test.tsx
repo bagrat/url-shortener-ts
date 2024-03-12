@@ -2,6 +2,17 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import App from "./App";
 import { act } from "react-dom/test-utils";
 
+beforeEach(() => {
+  jest.spyOn(global, "fetch").mockResolvedValue({
+    ok: true,
+    json: async () => ({ shortUrl: "http://localhost:5678/abcdef" }),
+  } as Response);
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 test("renders homepage", () => {
   render(<App />);
   const linkElement = screen.getByText(/Shorten your long URL/i);
