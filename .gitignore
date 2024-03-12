@@ -26,3 +26,5 @@ api/urlData.json
 
 api/src/*.js
 **/jest.config.js
+
+.ignore/

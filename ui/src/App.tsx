@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "./App.css";
 
-const API_URL = "http://localhost:5678";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5678";
 
 function App() {
   const [url, setUrl] = useState("");

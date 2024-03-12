@@ -5,10 +5,8 @@ import { UrlStore } from './urlStore';
 import { generateSlug, isValidUrl } from './utils';
 import { rateLimiter } from './rate-limiter';
 
-const URL_DATA_FILE = './urlData.json';
-
 export async function initApp(
-  urlDataFile: string = URL_DATA_FILE
+  urlDataFile: string
 ): Promise<express.Application> {
   const app = express();
 
@@ -33,6 +31,7 @@ export async function initApp(
         },
       })
     )
+    .use(express.static('public'))
     .use(rateLimiter());
 
   const urlStore = new UrlStore(urlDataFile);
@@ -61,7 +60,7 @@ function defineRoutes(app: express.Application) {
       // This enusres that the slug is unique.
       // In case of a normal database storage we would use a unique constraint.
       // In case of such a single threaded, single instance application, this is good enough.
-    } while (await urlStore.findUrlBySlug(slug));
+    } while (urlStore.findUrlBySlug(slug));
 
     await urlStore.saveUrlEntry(slug, originalUrl);
 

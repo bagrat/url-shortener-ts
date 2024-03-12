@@ -20,7 +20,7 @@ abstract class FileStore<
     try {
       const data = await readFile(this.dataFile, {
         encoding: 'utf8',
-        flag: 'w+',
+        flag: 'a+',
       });
       this.data = JSON.parse(data);
     } catch {
@@ -38,7 +38,7 @@ abstract class FileStore<
 export class UrlStore extends FileStore<Record<Slug, UrlEntry>> {
   protected data: Record<Slug, UrlEntry> = {};
 
-  async findUrlBySlug(slug: Slug): Promise<UrlEntry | undefined> {
+  findUrlBySlug(slug: Slug): UrlEntry | undefined {
     return this.data[slug];
   }
 
